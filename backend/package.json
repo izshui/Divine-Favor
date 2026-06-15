@@ -1,0 +1,13 @@
+{
+  "name": "faith-app-backend",
+  "version": "1.0.0",
+  "description": "信仰内容管理后端",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
