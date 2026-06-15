@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>灵修家园</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, sans-serif;
+            background: #f8f9fc;
+            padding-bottom: 70px;
+            color: #1e2a3e;
+        }
+        .main-content {
+            padding: 20px 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .category-header h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #2c3e4e;
+            border-left: 4px solid #b78c5a;
+            padding-left: 12px;
+        }
+        .search-icon {
+            background: #f0ede8;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .search-icon:active { background: #e0dbd1; }
+        /* 搜索栏 - 确保按钮清晰可见 */
+        .search-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .search-input {
+            flex: 2;
+            min-width: 150px;
+            padding: 12px 16px;
+            border-radius: 40px;
+            border: 1px solid #ddd;
+            font-size: 1rem;
+            background: white;
+        }
+        .search-btn {
+            background: #b78c5a;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-cancel {
+            background: #aaa;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 40px;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .sub-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 8px 0 16px;
+            scrollbar-width: thin;
+        }
+        .sub-tab {
+            background: #f0ede8;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #4a5b6e;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .sub-tab.active {
+            background: #b78c5a;
+            color: white;
+        }
+        .content-card {
+            background: white;
+            border-radius: 24px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .content-card:active { transform: scale(0.98); }
+        .content-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .summary {
+            font-size: 0.85rem;
+            color: #5d6f83;
+            line-height: 1.4;
+        }
+        .result-meta {
+            font-size: 0.7rem;
+            color: #b78c5a;
+            margin-top: 6px;
+        }
+        .back-button {
+            background: #e9ecef;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .detail-container {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            margin-top: 8px;
+        }
+        .detail-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            border-left: 4px solid #b78c5a;
+            padding-left: 12px;
+        }
+        .detail-html img, .detail-html audio {
+            max-width: 100%;
+            border-radius: 16px;
+            margin: 12px 0;
+        }
+        .empty-tip { text-align: center; padding: 48px 20px; color: #bdc1c6; }
+        .bottom-tab {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 12px 20px;
+            border-top: 1px solid #efebe5;
+            z-index: 100;
+        }
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            font-size: 0.7rem;
+            color: #8e9aaf;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 40px;
+        }
+        .tab-item.active { color: #b78c5a; background: #fef3e8; }
+        .tab-icon { font-size: 24px; }
+    </style>
+</head>
+<body>
+<div class="main-content" id="app"></div>
+<div class="bottom-tab" id="bottomTabs"></div>
+
+<script>
+    const API_BASE = '';
+    let currentParent = 'prayer';
+    let currentSub = '';
+    let viewMode = 'list';
+    let currentDetailId = null;
+    let lastViewMode = 'list';
+    let lastSearchKeyword = '';
+
+    const mainContainer = document.getElementById('app');
+
+    async function apiFetch(url) {
+        const res = await fetch(API_BASE + url);
+        if (!res.ok) throw new Error('请求失败');
+        return res.json();
+    }
+
+    async function loadSubsAndList(parent) {
+        viewMode = 'list';
+        currentDetailId = null;
+        const data = await apiFetch(`/api/subcategories?parent=${parent}`);
+        const subs = data.subs || [];
+        if (subs.length === 0) {
+            mainContainer.innerHTML = `
+                <div class="header-row">
+                    <div class="category-header"><h2>${getMainTitle(parent)}</h2></div>
+                    <div class="search-icon" id="searchIcon">🔍</div>
+                </div>
+                <div class="empty-tip">📭 暂无子分类，请联系管理员添加</div>
+            `;
+            document.getElementById('searchIcon')?.addEventListener('click', enterSearchMode);
+            return;
+        }
+        if (!currentSub || !subs.includes(currentSub)) currentSub = subs[0];
+        await loadContentList(parent, currentSub, subs);
+    }
+
+    async function loadContentList(parent, sub, allSubs) {
+        const contentsData = await apiFetch(`/api/contents?parent=${parent}&sub=${encodeURIComponent(sub)}`);
+        const contents = contentsData.contents || [];
+        let html = `<div class="header-row">
+                        <div class="category-header"><h2>${getMainTitle(parent)}</h2></div>
+                        <div class="search-icon" id="searchIcon">🔍</div>
+                    </div>`;
+        html += `<div class="sub-tabs" id="subTabs">`;
+        allSubs.forEach(subItem => {
+            html += `<button class="sub-tab ${subItem === sub ? 'active' : ''}" data-sub="${subItem}">${escapeHtml(subItem)}</button>`;
+        });
+        html += `</div>`;
+        if (contents.length) {
+            contents.forEach(item => {
+                html += `<div class="content-card" data-id="${item.id}">
+                            <div class="content-title">${escapeHtml(item.title)}</div>
+                            <div class="summary">${escapeHtml(item.summary)}</div>
+                         </div>`;
+            });
+        } else {
+            html += `<div class="empty-tip">✨ 暂无内容</div>`;
+        }
+        mainContainer.innerHTML = html;
+        document.getElementById('searchIcon')?.addEventListener('click', enterSearchMode);
+        document.querySelectorAll('.sub-tab').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const newSub = btn.getAttribute('data-sub');
+                if (newSub === currentSub) return;
+                currentSub = newSub;
+                const newAllSubs = await fetchSubs(parent);
+                await loadContentList(parent, currentSub, newAllSubs);
+            });
+        });
+        document.querySelectorAll('.content-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.getAttribute('data-id');
+                showDetail(id);
+            });
+        });
+    }
+
+    function enterSearchMode() {
+        lastViewMode = viewMode;
+        viewMode = 'search';
+        currentDetailId = null;
+        renderSearchUI();
+    }
+
+    function renderSearchUI() {
+        mainContainer.innerHTML = `
+            <div class="header-row">
+                <div class="category-header"><h2>🔎 全局搜索</h2></div>
+                <div class="search-icon" id="closeSearchBtn">✕</div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchKeyword" class="search-input" placeholder="请输入关键词 例如：爱、祷告..." autocomplete="off">
+                <button id="doSearchBtn" class="search-btn">🔍 搜索</button>
+                <button id="cancelSearchBtn" class="search-cancel">取消</button>
+            </div>
+            <div id="searchResults" style="margin-top: 16px;"></div>
+        `;
+        document.getElementById('closeSearchBtn')?.addEventListener('click', exitSearchMode);
+        document.getElementById('cancelSearchBtn')?.addEventListener('click', exitSearchMode);
+        document.getElementById('doSearchBtn')?.addEventListener('click', performSearch);
+        const input = document.getElementById('searchKeyword');
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+            // 如果之前有搜索词，恢复
+            if (lastSearchKeyword) input.value = lastSearchKeyword;
+        }
+    }
+
+    async function performSearch() {
+        const keyword = document.getElementById('searchKeyword').value.trim();
+        if (!keyword) {
+            document.getElementById('searchResults').innerHTML = '<div class="empty-tip">请输入搜索词</div>';
+            return;
+        }
+        lastSearchKeyword = keyword;
+        const data = await apiFetch(`/api/search?q=${encodeURIComponent(keyword)}`);
+        const results = data.results || [];
+        const container = document.getElementById('searchResults');
+        if (results.length === 0) {
+            container.innerHTML = '<div class="empty-tip">😢 未找到相关内容，试试其他关键词</div>';
+            return;
+        }
+        let html = '';
+        results.forEach(res => {
+            html += `<div class="content-card" data-id="${res.id}">
+                        <div class="content-title">${escapeHtml(res.title)}</div>
+                        <div class="summary">${escapeHtml(res.summary)}</div>
+                        <div class="result-meta">📂 ${getMainTitle(res.parentCategory)} · ${escapeHtml(res.subCategory)}</div>
+                     </div>`;
+        });
+        container.innerHTML = html;
+        document.querySelectorAll('#searchResults .content-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.getAttribute('data-id');
+                showDetail(id);
+            });
+        });
+    }
+
+    function exitSearchMode() {
+        viewMode = lastViewMode;
+        if (viewMode === 'list') {
+            loadSubsAndList(currentParent);
+        } else {
+            // 其他情况返回列表
+            loadSubsAndList(currentParent);
+        }
+    }
+
+    async function showDetail(id) {
+        lastViewMode = viewMode;
+        if (viewMode === 'search') {
+            const kwInput = document.getElementById('searchKeyword');
+            if (kwInput) lastSearchKeyword = kwInput.value;
+        }
+        viewMode = 'detail';
+        currentDetailId = id;
+        const data = await apiFetch(`/api/content/${id}`);
+        const detailHtml = `
+            <button class="back-button" id="backToListBtn">← 返回</button>
+            <div class="detail-container">
+                <div class="detail-title">${escapeHtml(data.title)}</div>
+                <div class="detail-html">${data.html}</div>
+            </div>
+        `;
+        mainContainer.innerHTML = detailHtml;
+        document.getElementById('backToListBtn').addEventListener('click', () => {
+            if (lastViewMode === 'search') {
+                enterSearchMode();
+                if (lastSearchKeyword) {
+                    setTimeout(() => {
+                        const input = document.getElementById('searchKeyword');
+                        if (input) input.value = lastSearchKeyword;
+                        performSearch();
+                    }, 50);
+                }
+            } else {
+                loadSubsAndList(currentParent);
+            }
+        });
+    }
+
+    async function fetchSubs(parent) {
+        const data = await apiFetch(`/api/subcategories?parent=${parent}`);
+        return data.subs || [];
+    }
+
+    function getMainTitle(parent) {
+        const map = { prayer: '祈祷', song: '歌曲', bible: '圣经', about: '关于' };
+        return map[parent];
+    }
+
+    function renderBottomTabs() {
+        const tabs = ['prayer', 'song', 'bible', 'about'];
+        const icons = { prayer: '🕊️', song: '🎵', bible: '📖', about: '💒' };
+        const names = { prayer: '祈祷', song: '歌曲', bible: '圣经', about: '关于' };
+        const container = document.getElementById('bottomTabs');
+        container.innerHTML = tabs.map(p => `
+            <button class="tab-item ${currentParent === p ? 'active' : ''}" data-parent="${p}">
+                <span class="tab-icon">${icons[p]}</span>
+                <span>${names[p]}</span>
+            </button>
+        `).join('');
+        document.querySelectorAll('.tab-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const newParent = btn.getAttribute('data-parent');
+                if (newParent === currentParent && viewMode !== 'search') return;
+                currentParent = newParent;
+                currentSub = '';
+                viewMode = 'list';
+                currentDetailId = null;
+                renderBottomTabs();
+                loadSubsAndList(currentParent);
+            });
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 启动应用
+    renderBottomTabs();
+    loadSubsAndList('prayer');
+</script>
+</body>
+</html>
